@@ -1,50 +1,73 @@
 const net = require("net");
-require("dotenv").config();
 const parser = require("./parser");
 
-const client = net.createConnection(
-  {
-    host: "irc.ppy.sh",
-    port: 6667,
-  },
-  () => {
-    console.log("Connected to IRC");
-    client.write(`PASS ${process.env.PASSWORD}\r\n`);
-    client.write(`NICK ${process.env.USERNAME}\r\n`);
-  },
-);
+class IrcClient {
+  constructor({ host, port, username, password }) {
+    this.host = host;
+    this.port = port;
+    this.username = username;
+    this.password = password;
 
-let buffer = "";
+    this.client = null;
+    this.buffer = "";
+  }
 
-client.on("error", (err) => {
-  console.log("SOCKET ERROR:", err.message);
-});
+  connect() {
+    this.client = net.createConnection(
+      {
+        host: this.host,
+        port: this.port,
+      },
+      () => {
+        console.log("Connected to IRC");
+        this.client.write(`PASS ${this.password}\r\n`);
+        this.client.write(`NICK ${this.username}\r\n`);
+      },
+    );
 
-client.on("close", () => {
-  console.log("CONNECTION CLOSED");
-});
+    this.client.on("error", (err) => {
+      console.log("SOCKET ERROR:", err.message);
+    });
 
-client.on("end", () => {
-  console.log("CONNECTION ENDED");
-});
+    this.client.on("close", () => {
+      console.log("CONNECTION CLOSED");
+    });
 
-client.on("data", (data) => {
-  buffer += data.toString();
+    this.client.on("end", () => {
+      console.log("CONNECTION ENDED");
+    });
 
-  const lines = buffer.split(/\r?\n/);
-  buffer = lines.pop();
+    this.client.on("data", (data) => {
+      this.handleData(data);
+    });
+  }
 
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const parsed = parser(line);
+  handleData(data) {
+    this.buffer += data.toString();
 
-    if (parsed.command === "QUIT") continue;
+    const lines = this.buffer.split(/\r?\n/);
+    this.buffer = lines.pop();
 
-    console.log(parsed);
-
-    if (parsed.command === "PING") {
-      console.log("Received PING, sending PONG");
-      client.write(`PONG :${parsed.trailing}\r\n`);
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const parsed = parser(line);
+      this.handleMessage(parsed);
     }
   }
-});
+
+  handleMessage(msg) {
+    if (msg.command === "PING") {
+      this.sendRaw(`PONG :${msg.trailing}`);
+      return;
+    }
+
+    console.log(msg);
+  }
+
+  sendRaw(line) {
+    if (!this.client) return;
+    this.client.write(`${line}\r\n`);
+  }
+}
+
+module.exports = IrcClient;
