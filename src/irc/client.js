@@ -61,6 +61,14 @@ class IrcClient {
       return;
     }
 
+    if (msg.command === "PRIVMSG") {
+      const sender = msg.prefix?.split("!")[0];
+      const target = msg.params[0];
+      const message = msg.trailing;
+      console.log({ raw: msg.raw, sender, target, message });
+      return;
+    }
+
     console.log(msg);
   }
 

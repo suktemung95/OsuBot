@@ -1,5 +1,7 @@
 require("dotenv").config();
+const startServer = require("./api/server");
 const IRCClient = require("./irc/client");
+const commands = require("./irc/commands");
 
 console.log({
   HOST: process.env.HOST,
@@ -16,3 +18,4 @@ const client = new IRCClient({
 });
 
 client.connect();
+startServer(commands);
