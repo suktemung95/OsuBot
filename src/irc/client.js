@@ -1,5 +1,5 @@
 const net = require("net");
-
+require("dotenv").config();
 const parser = require("./parser");
 
 const client = net.createConnection(
@@ -9,8 +9,8 @@ const client = net.createConnection(
   },
   () => {
     console.log("Connected to IRC");
-    client.write("PASS c0d51271\r\n");
-    client.write("NICK LickWidFyre\r\n");
+    client.write(`PASS ${process.env.PASSWORD}\r\n`);
+    client.write(`NICK ${process.env.USERNAME}\r\n`);
   },
 );
 
